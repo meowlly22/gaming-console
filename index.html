@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gaming Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="console-body">
+
+<div class="bg-art" aria-hidden="true">
+<svg class="bg-art-blobs" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1400" preserveAspectRatio="xMidYMid slice">
+<defs>
+<filter id="blobBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="55"/></filter>
+<linearGradient id="blobPink" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffd6e8"/><stop offset="100%" stop-color="#ffb3d9"/></linearGradient>
+<linearGradient id="blobMint" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#c8f5e4"/><stop offset="100%" stop-color="#a8dfff"/></linearGradient>
+</defs>
+<ellipse class="blob blob--a" cx="120" cy="1180" rx="220" ry="160" fill="url(#blobPink)" filter="url(#blobBlur)" opacity="0.65"/>
+<ellipse class="blob blob--b" cx="820" cy="200" rx="200" ry="140" fill="url(#blobMint)" filter="url(#blobBlur)" opacity="0.55"/>
+<ellipse class="blob blob--c" cx="680" cy="1050" rx="160" ry="120" fill="#e4d4ff" filter="url(#blobBlur)" opacity="0.45"/>
+</svg>
+<svg class="bg-art-stars" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+<g fill="#ffffff" class="star-field">
+<path class="star star--1" d="M72 88l5 14 15 5-15 5-5 14-5-14-15-5 15-5z" opacity="0.65"/>
+<path class="star star--2" d="M328 52l4 11 12 4-12 4-4 11-4-11-12-4 12-4z" opacity="0.5"/>
+<path class="star star--3" d="M268 210l3 8 9 3-9 3-3 8-3-8-9-3 9-3z" opacity="0.45"/>
+<path class="star star--4" d="M92 268l4 10 11 4-11 4-4 10-4-10-11-4 11-4z" opacity="0.55"/>
+<path class="star star--5" d="M348 300l2 6 7 2-7 2-2 6-2-6-7-2 7-2z" opacity="0.4"/>
+</g>
+</svg>
+<svg class="bg-art-console" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" aria-hidden="true">
+<title>Decorative handheld console</title>
+<rect x="25" y="28" width="150" height="72" rx="18" fill="rgba(255,255,255,0.35)" stroke="rgba(255,182,210,0.6)" stroke-width="2"/>
+<rect x="42" y="42" width="92" height="48" rx="6" fill="rgba(200,230,255,0.4)" stroke="rgba(150,190,240,0.35)" stroke-width="1.5"/>
+<circle cx="62" cy="98" r="9" fill="rgba(255,182,210,0.75)"/>
+<circle cx="138" cy="98" r="9" fill="rgba(180,220,255,0.85)"/>
+<path d="M118 52h10v10h10v8h-10v10h-8v-10h-10v-8h10z" fill="rgba(255,255,255,0.7)" opacity="0.85"/>
+</svg>
+<div class="bg-art-hearts">
+<span class="heart-float heart-float--1">♥</span>
+<span class="heart-float heart-float--2">♥</span>
+<span class="heart-float heart-float--3">♥</span>
+</div>
+</div>
+
+<header class="console-header">
+<p class="console-kicker" aria-hidden="true">✦ · ★ · ✦</p>
+<h1 class="console-title"><span class="console-title-inner">Gaming Console</span></h1>
+<p class="console-sub">Insert cartridge · Play with your own numbers &amp; words</p>
+</header>
+
+<nav class="launcher" id="launcher" aria-label="Game selection">
+<button type="button" class="cart cart--home active" data-game="home" aria-pressed="true">
+<span class="cart-label">Home</span>
+<span class="cart-meta">menu</span>
+</button>
+<button type="button" class="cart" data-game="sudoku" aria-pressed="false">
+<span class="cart-label">Sudoku</span>
+<span class="cart-meta">backtracking</span>
+</button>
+<button type="button" class="cart" data-game="minesweeper" aria-pressed="false">
+<span class="cart-label">Minesweeper</span>
+<span class="cart-meta">grid + flood fill</span>
+</button>
+<button type="button" class="cart" data-game="crossword" aria-pressed="false">
+<span class="cart-label">Crossword</span>
+<span class="cart-meta">grid + lookup</span>
+</button>
+<button type="button" class="cart" data-game="stack" aria-pressed="false">
+<span class="cart-label">Bracket Stack</span>
+<span class="cart-meta">stack validation</span>
+</button>
+<button type="button" class="cart" data-game="sort" aria-pressed="false">
+<span class="cart-label">Sort Studio</span>
+<span class="cart-meta">insertion / merge</span>
+</button>
+<button type="button" class="cart" data-game="binary" aria-pressed="false">
+<span class="cart-label">Binary Search</span>
+<span class="cart-meta">sorted array</span>
+</button>
+</nav>
+
+<main class="viewport" id="viewport">
+
+<section id="game-home" class="game-screen active" data-screen="home">
+<div class="home-inner">
+<p class="lead">Pick a pastel cartridge above—each game is built from real puzzle logic (queues, stacks, arrays, recursion) and needs <em>your</em> input to run.</p>
+<ul class="home-list">
+<li><strong>Sudoku</strong> — fill cells; solver runs recursive backtracking with constraint checks.</li>
+<li><strong>Minesweeper</strong> — reveal cells; counts sum neighboring mines; zero-cells flood-fill open the region.</li>
+<li><strong>Crossword</strong> — type letters; answers checked against a keyed grid map.</li>
+<li><strong>Bracket Stack</strong> — type code-like brackets; a stack pushes/opens and pops/matches.</li>
+<li><strong>Sort Studio</strong> — paste numbers; insertion sort or merge sort (divide &amp; conquer + merge).</li>
+<li><strong>Binary Search</strong> — sorted list + target you choose; each step narrows <code>[lo, hi]</code>.</li>
+</ul>
+</div>
+</section>
+
+<section id="game-sudoku" class="game-screen" data-screen="sudoku" hidden>
+<div class="panel">
+<h2>Sudoku · Backtracking</h2>
+<p class="panel-hint">Enter digits 1–9. Empty cells stay blank. Solve tries candidates depth-first with row, column, and 3×3 box checks.</p>
+<div id="sudoku" class="sudoku"></div>
+<button type="button" onclick="solveSudoku()">Solve</button>
+</div>
+</section>
+
+<section id="game-minesweeper" class="game-screen" data-screen="minesweeper" hidden>
+<div class="panel">
+<h2>Minesweeper · Adjacency counts</h2>
+<p class="panel-hint"><strong>Left-click</strong> to reveal a cell. <strong>Right-click</strong> to plant/remove a flag. The first tap never hits a mine — mines are placed after that, away from your opening square. Open cells show how many mines touch them (0–8); empty regions expand in one sweep.</p>
+<div class="ms-toolbar">
+<span class="ms-counter" id="ms-mines-left" aria-live="polite">—</span>
+<button type="button" id="ms-new-game" class="btn-secondary">New game</button>
+</div>
+<p id="ms-status" class="result-msg ms-status-line" role="status"></p>
+<div id="minesweeper" class="minesweeper" role="grid" aria-label="Minesweeper board"></div>
+</div>
+</section>
+
+<section id="game-crossword" class="game-screen" data-screen="crossword" hidden>
+<div class="panel">
+<h2>Crossword · Grid map</h2>
+<p class="panel-hint">Letters keyed by row,column in an answer map—same idea as a sparse dictionary over coordinates.</p>
+<div class="crossword-wrapper">
+<div id="crossword" class="crossword"></div>
+<div class="clues">
+<div>
+<h3>Across</h3>
+<ul>
+<li><span>1</span>LIFO data structure</li>
+<li><span>3</span>8 bits of data</li>
+<li><span>5</span>Repeated execution construct</li>
+</ul>
+</div>
+<div>
+<h3>Down</h3>
+<ul>
+<li><span>2</span>Suitable or appropriate</li>
+<li><span>4</span>Runtime exception message</li>
+</ul>
+</div>
+</div>
+<button type="button" onclick="checkCrossword()">Check each word</button>
+<div id="crossword-feedback" class="cw-feedback" aria-live="polite"></div>
+</div>
+</div>
+</section>
+
+<section id="game-stack" class="game-screen" data-screen="stack" hidden>
+<div class="panel panel-wide">
+<h2>Bracket Stack · LIFO validation</h2>
+<p class="panel-hint">Type <code>( ) [ ] { }</code> and any other characters—only brackets matter. The algorithm scans left-to-right: opening brackets push onto a stack; closing brackets pop and must match.</p>
+<label class="field-label" for="stack-input">Your string</label>
+<textarea id="stack-input" class="stack-input" rows="4" placeholder='e.g. "{ [ ( ) ] }" or code snippets'></textarea>
+<div class="stack-actions">
+<button type="button" id="stack-run">Validate</button>
+<button type="button" id="stack-clear" class="btn-secondary">Clear trace</button>
+</div>
+<p id="stack-result" class="result-msg" role="status"></p>
+<pre id="stack-trace" class="algo-trace" aria-live="polite"></pre>
+</div>
+</section>
+
+<section id="game-sort" class="game-screen" data-screen="sort" hidden>
+<div class="panel panel-wide">
+<h2>Sort Studio · Array algorithms</h2>
+<p class="panel-hint">Comma-separated integers (e.g. <code>5, 2, 9, 1</code>). Insertion sort builds a sorted prefix in-place. Merge sort splits halves recursively and merges sorted runs.</p>
+<label class="field-label" for="sort-input">Numbers</label>
+<input type="text" id="sort-input" class="text-input" placeholder="5, 2, 9, 1, 3">
+<label class="field-label" for="sort-algo">Algorithm</label>
+<select id="sort-algo" class="text-input select-input">
+<option value="insertion">Insertion sort — O(n²) comparisons, in-place</option>
+<option value="merge">Merge sort — O(n log n), stable merge</option>
+</select>
+<div class="stack-actions">
+<button type="button" id="sort-run">Sort &amp; show steps</button>
+<button type="button" id="sort-reset" class="btn-secondary">Reset view</button>
+</div>
+<div id="sort-bars" class="sort-bars"></div>
+<pre id="sort-log" class="algo-trace algo-trace--short" aria-live="polite"></pre>
+</div>
+</section>
+
+<section id="game-binary" class="game-screen" data-screen="binary" hidden>
+<div class="panel panel-wide">
+<h2>Binary Search · Divide interval</h2>
+<p class="panel-hint">Must be sorted ascending. You provide the array and target; each step compares <code>mid</code> and halves the search range <code>[lo, hi]</code>.</p>
+<label class="field-label" for="binary-array">Sorted integers (comma-separated)</label>
+<input type="text" id="binary-array" class="text-input" placeholder="1, 3, 5, 7, 9, 11">
+<label class="field-label" for="binary-target">Target</label>
+<input type="text" id="binary-target" class="text-input" placeholder="7">
+<div class="stack-actions">
+<button type="button" id="binary-step">Next step</button>
+<button type="button" id="binary-reset" class="btn-secondary">Reset</button>
+</div>
+<p id="binary-status" class="result-msg" role="status"></p>
+<div id="binary-visual" class="binary-visual"></div>
+<pre id="binary-log" class="algo-trace algo-trace--short" aria-live="polite"></pre>
+</div>
+</section>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
