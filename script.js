@@ -3,6 +3,320 @@
 const launcher = document.getElementById("launcher");
 const screens = document.querySelectorAll(".game-screen");
 
+/* ---------- WEB AUDIO: SFX + RETRO BGM ---------- */
+
+const BGM_STORAGE_KEY = "gaming-console-bgm-muted";
+
+let consoleAudioCtx = null;
+let sfxBus = null;
+let bgmBus = null;
+let bgmSourceNode = null;
+let bgmBufferCached = null;
+let bgmBufferCachedRate = null;
+let bgmStarting = false;
+let audioUnlocked = false;
+let bgmMuted = false;
+
+try {
+  bgmMuted = localStorage.getItem(BGM_STORAGE_KEY) === "1";
+} catch (_) {
+  bgmMuted = false;
+}
+
+function ensureAudioGraph() {
+  const ACtx = window.AudioContext || window.webkitAudioContext;
+  if (!ACtx) return null;
+  if (!consoleAudioCtx) {
+    consoleAudioCtx = new ACtx();
+    sfxBus = consoleAudioCtx.createGain();
+    sfxBus.gain.value = 0.92;
+    sfxBus.connect(consoleAudioCtx.destination);
+    bgmBus = consoleAudioCtx.createGain();
+    bgmBus.gain.value = 0;
+    bgmBus.connect(consoleAudioCtx.destination);
+  }
+  return { ctx: consoleAudioCtx, sfxOut: sfxBus, bgmOut: bgmBus };
+}
+
+function noteScheduleOffline(ctx, t0, freq, duration, velocity, type = "square") {
+  const osc = ctx.createOscillator();
+  const filt = ctx.createBiquadFilter();
+  filt.type = "lowpass";
+  filt.frequency.value = type === "square" ? 2400 : 5200;
+  filt.Q.value = 0.6;
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  const a = 0.004;
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(velocity, t0 + a);
+  const sustainEnd = t0 + Math.max(duration - 0.008, a + 0.01);
+  g.gain.setValueAtTime(velocity, sustainEnd);
+  g.gain.linearRampToValueAtTime(0, t0 + duration);
+  osc.connect(filt);
+  filt.connect(g);
+  g.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.03);
+}
+
+function hatScheduleOffline(ctx, t0, sampleRate, velocity) {
+  const len = Math.ceil(0.028 * sampleRate);
+  const buf = ctx.createBuffer(1, len, sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++)
+    d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.22));
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 5200;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(velocity, t0);
+  g.gain.exponentialRampToValueAtTime(0.0009, t0 + 0.028);
+  src.connect(hp);
+  hp.connect(g);
+  g.connect(ctx.destination);
+  src.start(t0);
+  src.stop(t0 + 0.035);
+}
+
+function renderRetroBgmBuffer(sampleRate) {
+  const bpm = 116;
+  const beat = 60 / bpm;
+  const nBeats = 8;
+  const duration = nBeats * beat;
+  const offline = new OfflineAudioContext(
+    1,
+    Math.ceil(duration * sampleRate),
+    sampleRate
+  );
+
+  const chords = [
+    { root: 110, tri: [220, 261.63, 329.63] },
+    { root: 87.31, tri: [174.61, 220, 261.63] },
+    { root: 130.81, tri: [261.63, 329.63, 392] },
+    { root: 98, tri: [196, 246.94, 293.66] },
+  ];
+
+  for (let b = 0; b < nBeats; b++) {
+    const ch = chords[Math.floor(b / 2) % 4];
+    const t = b * beat;
+    noteScheduleOffline(
+      offline,
+      t,
+      ch.root,
+      beat * 0.94,
+      0.1,
+      "square"
+    );
+    for (let s = 0; s < 2; s++) {
+      const tt = t + s * (beat / 2);
+      const noteIdx = (b * 2 + s) % 3;
+      noteScheduleOffline(
+        offline,
+        tt,
+        ch.tri[noteIdx],
+        beat * 0.42,
+        0.048,
+        "triangle"
+      );
+    }
+    hatScheduleOffline(offline, t + beat * 0.5, sampleRate, 0.035);
+  }
+
+  return offline.startRendering();
+}
+
+function getBgmBuffer(sampleRate) {
+  if (bgmBufferCached && bgmBufferCachedRate === sampleRate)
+    return Promise.resolve(bgmBufferCached);
+  return renderRetroBgmBuffer(sampleRate).then((buf) => {
+    bgmBufferCached = buf;
+    bgmBufferCachedRate = sampleRate;
+    return buf;
+  });
+}
+
+function stopBgm() {
+  if (bgmSourceNode) {
+    try {
+      bgmSourceNode.stop();
+    } catch (_) {}
+    try {
+      bgmSourceNode.disconnect();
+    } catch (_) {}
+    bgmSourceNode = null;
+  }
+  if (consoleAudioCtx && bgmBus) {
+    bgmBus.gain.cancelScheduledValues(consoleAudioCtx.currentTime);
+    bgmBus.gain.setValueAtTime(0, consoleAudioCtx.currentTime);
+  }
+}
+
+async function startBgmIfNeeded() {
+  const g = ensureAudioGraph();
+  if (!g || bgmMuted || bgmSourceNode || bgmStarting) return;
+  bgmStarting = true;
+  try {
+    await consoleAudioCtx.resume();
+    const buffer = await getBgmBuffer(consoleAudioCtx.sampleRate);
+    if (bgmMuted || bgmSourceNode) return;
+    stopBgm();
+    bgmSourceNode = consoleAudioCtx.createBufferSource();
+    bgmSourceNode.buffer = buffer;
+    bgmSourceNode.loop = true;
+    const now = consoleAudioCtx.currentTime;
+    bgmBus.gain.cancelScheduledValues(now);
+    bgmBus.gain.setValueAtTime(0, now);
+    bgmBus.gain.linearRampToValueAtTime(0.14, now + 0.35);
+    bgmSourceNode.connect(bgmBus);
+    bgmSourceNode.start(0);
+  } finally {
+    bgmStarting = false;
+  }
+}
+
+function playCartridgeInsertSound() {
+  try {
+    unlockAudio();
+    const g = ensureAudioGraph();
+    if (!g) return;
+    const ctx = g.ctx;
+    void ctx.resume();
+    const out = g.sfxOut;
+    const t0 = ctx.currentTime;
+    const durNoise = 0.048;
+
+    const noiseBuf = ctx.createBuffer(
+      1,
+      Math.ceil(ctx.sampleRate * durNoise),
+      ctx.sampleRate
+    );
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 1.15;
+    bp.frequency.setValueAtTime(3200, t0);
+    bp.frequency.exponentialRampToValueAtTime(750, t0 + durNoise);
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.07, t0);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0008, t0 + durNoise);
+    noiseSrc.connect(bp);
+    bp.connect(noiseGain);
+    noiseGain.connect(out);
+    noiseSrc.start(t0);
+    noiseSrc.stop(t0 + durNoise + 0.02);
+
+    const thunk = ctx.createOscillator();
+    thunk.type = "triangle";
+    const thunkGain = ctx.createGain();
+    thunk.frequency.setValueAtTime(210, t0 + 0.01);
+    thunk.frequency.exponentialRampToValueAtTime(88, t0 + 0.12);
+    thunkGain.gain.setValueAtTime(0, t0);
+    thunkGain.gain.linearRampToValueAtTime(0.2, t0 + 0.016);
+    thunkGain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.15);
+    thunk.connect(thunkGain);
+    thunkGain.connect(out);
+    thunk.start(t0);
+    thunk.stop(t0 + 0.16);
+
+    const seat = ctx.createOscillator();
+    seat.type = "sine";
+    const seatGain = ctx.createGain();
+    seat.frequency.setValueAtTime(1350, t0 + 0.006);
+    seat.frequency.exponentialRampToValueAtTime(420, t0 + 0.038);
+    seatGain.gain.setValueAtTime(0, t0);
+    seatGain.gain.linearRampToValueAtTime(0.09, t0 + 0.012);
+    seatGain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.052);
+    seat.connect(seatGain);
+    seatGain.connect(out);
+    seat.start(t0);
+    seat.stop(t0 + 0.055);
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function syncBgmToggleUi() {
+  const btn = document.getElementById("bgm-toggle");
+  if (!btn) return;
+  const on = !bgmMuted;
+  btn.classList.toggle("bgm-toggle--muted", !on);
+  btn.setAttribute("aria-pressed", on ? "true" : "false");
+  btn.setAttribute(
+    "aria-label",
+    on
+      ? "Background music on. Click to mute."
+      : "Background music muted. Click to play."
+  );
+}
+
+function setBgmMuted(muted) {
+  bgmMuted = muted;
+  try {
+    if (muted) localStorage.setItem(BGM_STORAGE_KEY, "1");
+    else localStorage.removeItem(BGM_STORAGE_KEY);
+  } catch (_) {}
+  syncBgmToggleUi();
+  if (muted) stopBgm();
+  else void startBgmIfNeeded();
+}
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  const g = ensureAudioGraph();
+  if (!g) return;
+  audioUnlocked = true;
+  void g.ctx.resume();
+  if (!bgmMuted) void startBgmIfNeeded();
+}
+
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (e.target.closest("#bgm-toggle")) return;
+    unlockAudio();
+  },
+  { once: true, capture: true }
+);
+
+document.addEventListener(
+  "click",
+  (e) => {
+    if (e.target.closest("#bgm-toggle")) return;
+    unlockAudio();
+  },
+  { once: true, capture: true }
+);
+
+document.addEventListener(
+  "click",
+  (e) => {
+    const btn = e.target.closest("button");
+    if (!btn || btn.disabled) return;
+    if (btn.closest(".minesweeper")) return;
+    if (btn.id === "bgm-toggle") return;
+    playCartridgeInsertSound();
+  },
+  true
+);
+
+const bgmToggleEl = document.getElementById("bgm-toggle");
+if (bgmToggleEl) {
+  bgmToggleEl.addEventListener("click", () => {
+    if (!audioUnlocked) {
+      unlockAudio();
+      return;
+    }
+    setBgmMuted(!bgmMuted);
+  });
+}
+syncBgmToggleUi();
+
 function setActiveGame(id) {
   screens.forEach((el) => {
     const on = el.dataset.screen === id;
@@ -53,17 +367,118 @@ for (let i = 0; i < 81; i++) {
   sudoku.appendChild(input);
 }
 
-function getBoard() {
+const sudokuStatusEl = document.getElementById("sudoku-status");
+
+function sudokuReadBoard() {
   const inputs = document.querySelectorAll("#sudoku input");
   const board = [];
+  const formatErrors = new Set();
   for (let i = 0; i < 9; i++) {
     board[i] = [];
     for (let j = 0; j < 9; j++) {
-      const val = inputs[i * 9 + j].value;
-      board[i][j] = val ? parseInt(val, 10) : 0;
+      const raw = inputs[i * 9 + j].value.trim();
+      if (!raw) {
+        board[i][j] = 0;
+        continue;
+      }
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1 || n > 9) {
+        formatErrors.add(`${i},${j}`);
+        board[i][j] = 0;
+      } else {
+        board[i][j] = n;
+      }
     }
   }
-  return board;
+  return { board, formatErrors };
+}
+
+function sudokuFindConflicts(board) {
+  const conflicts = new Set();
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const n = board[r][c];
+      if (n < 1 || n > 9) continue;
+      for (let cc = 0; cc < 9; cc++) {
+        if (cc !== c && board[r][cc] === n) {
+          conflicts.add(`${r},${c}`);
+          conflicts.add(`${r},${cc}`);
+        }
+      }
+      for (let rr = 0; rr < 9; rr++) {
+        if (rr !== r && board[rr][c] === n) {
+          conflicts.add(`${r},${c}`);
+          conflicts.add(`${rr},${c}`);
+        }
+      }
+      const sr = r - (r % 3);
+      const sc = c - (c % 3);
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const rr = sr + i;
+          const cc = sc + j;
+          if (rr === r && cc === c) continue;
+          if (board[rr][cc] === n) {
+            conflicts.add(`${r},${c}`);
+            conflicts.add(`${rr},${cc}`);
+          }
+        }
+      }
+    }
+  }
+  return conflicts;
+}
+
+function sudokuRefreshValidation() {
+  const inputs = document.querySelectorAll("#sudoku input");
+  inputs.forEach((el) => {
+    el.classList.remove("sudoku-cell-conflict");
+    el.removeAttribute("aria-invalid");
+  });
+
+  const { board, formatErrors } = sudokuReadBoard();
+  const conflicts = sudokuFindConflicts(board);
+
+  for (const key of formatErrors) {
+    const [r, c] = key.split(",").map(Number);
+    const el = inputs[r * 9 + c];
+    el.classList.add("sudoku-cell-conflict");
+    el.setAttribute("aria-invalid", "true");
+  }
+  for (const key of conflicts) {
+    const [r, c] = key.split(",").map(Number);
+    const el = inputs[r * 9 + c];
+    el.classList.add("sudoku-cell-conflict");
+    el.setAttribute("aria-invalid", "true");
+  }
+
+  const badFormat = formatErrors.size > 0;
+  const badConflict = conflicts.size > 0;
+
+  if (sudokuStatusEl) {
+    if (!badFormat && !badConflict) {
+      sudokuStatusEl.textContent = "";
+      sudokuStatusEl.className = "result-msg";
+    } else {
+      const parts = [];
+      if (badFormat)
+        parts.push("Each cell must be blank or a whole number from 1 to 9.");
+      if (badConflict)
+        parts.push(
+          "Some digits repeat in the same row, column, or 3×3 box."
+        );
+      sudokuStatusEl.textContent = parts.join(" ");
+      sudokuStatusEl.className = "result-msg result-msg--bad";
+    }
+  }
+
+  return !badFormat && !badConflict;
+}
+
+sudoku.addEventListener("input", sudokuRefreshValidation);
+
+function getBoard() {
+  return sudokuReadBoard().board;
 }
 
 function setBoard(board) {
@@ -103,6 +518,7 @@ async function solve(board) {
 }
 
 async function solveSudoku() {
+  if (!sudokuRefreshValidation()) return;
   const board = getBoard();
   await solve(board);
 }
@@ -220,11 +636,16 @@ function msUpdateDom(r, c) {
   }
 }
 
+function msMinesRemainingLabel(remaining) {
+  const n = Math.max(0, remaining);
+  return n === 1 ? "1 mine" : `${n} mines`;
+}
+
 function msRefreshToolbar() {
   let flags = 0;
   for (let r = 0; r < MS_ROWS; r++)
     for (let c = 0; c < MS_COLS; c++) if (msFlagged[r][c]) flags++;
-  msMinesLeftEl.textContent = String(Math.max(0, MS_MINES - flags));
+  msMinesLeftEl.textContent = msMinesRemainingLabel(MS_MINES - flags);
 }
 
 function msCheckWin() {
@@ -307,7 +728,7 @@ function msNewGame() {
   msFlagged = Array.from({ length: MS_ROWS }, () => Array(MS_COLS).fill(false));
   msStatusEl.textContent = "";
   msStatusEl.className = "result-msg ms-status-line";
-  msMinesLeftEl.textContent = String(MS_MINES);
+  msMinesLeftEl.textContent = msMinesRemainingLabel(MS_MINES);
 
   for (let r = 0; r < MS_ROWS; r++)
     for (let c = 0; c < MS_COLS; c++) {

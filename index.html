@@ -50,6 +50,12 @@
 <p class="console-kicker" aria-hidden="true">✦ · ★ · ✦</p>
 <h1 class="console-title"><span class="console-title-inner">Gaming Console</span></h1>
 <p class="console-sub">Insert cartridge · Play with your own numbers &amp; words</p>
+<div class="console-header-tools">
+<button type="button" id="bgm-toggle" class="bgm-toggle" aria-pressed="true" aria-label="Background music on. Click to mute.">
+<span class="bgm-toggle-icon" aria-hidden="true">♪</span>
+<span class="bgm-toggle-text">Music</span>
+</button>
+</div>
 </header>
 
 <nav class="launcher" id="launcher" aria-label="Game selection">
@@ -104,6 +110,7 @@
 <h2>Sudoku · Backtracking</h2>
 <p class="panel-hint">Enter digits 1–9. Empty cells stay blank. Solve tries candidates depth-first with row, column, and 3×3 box checks.</p>
 <div id="sudoku" class="sudoku"></div>
+<p id="sudoku-status" class="result-msg" role="status" aria-live="polite"></p>
 <button type="button" onclick="solveSudoku()">Solve</button>
 </div>
 </section>
@@ -113,7 +120,7 @@
 <h2>Minesweeper · Adjacency counts</h2>
 <p class="panel-hint"><strong>Left-click</strong> to reveal a cell. <strong>Right-click</strong> to plant/remove a flag. The first tap never hits a mine — mines are placed after that, away from your opening square. Open cells show how many mines touch them (0–8); empty regions expand in one sweep.</p>
 <div class="ms-toolbar">
-<span class="ms-counter" id="ms-mines-left" aria-live="polite">—</span>
+<span class="ms-counter" id="ms-mines-left" aria-live="polite"></span>
 <button type="button" id="ms-new-game" class="btn-secondary">New game</button>
 </div>
 <p id="ms-status" class="result-msg ms-status-line" role="status"></p>

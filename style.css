@@ -120,6 +120,54 @@ text-transform:uppercase;
 font-weight:700;
 }
 
+.console-header-tools{
+display:flex;
+justify-content:center;
+margin-top:18px;
+}
+
+.bgm-toggle{
+display:inline-flex;
+align-items:center;
+gap:8px;
+margin:0;
+padding:10px 20px;
+border-radius:999px;
+border:3px solid rgba(255,255,255,0.95);
+background:linear-gradient(175deg, #ffffff 0%, var(--lavender) 48%, var(--mint) 100%);
+color:#5a4a72;
+font-family:inherit;
+font-size:12px;
+font-weight:700;
+letter-spacing:0.14em;
+text-transform:uppercase;
+cursor:pointer;
+box-shadow:var(--shadow-soft);
+transition:transform 0.18s ease, box-shadow 0.18s ease, opacity 0.2s ease;
+}
+
+.bgm-toggle:hover{
+transform:translateY(-2px);
+box-shadow:var(--shadow-card);
+}
+
+.bgm-toggle:focus-visible{
+outline:3px solid rgba(255,182,220,0.85);
+outline-offset:3px;
+}
+
+.bgm-toggle--muted{
+opacity:0.72;
+background:linear-gradient(180deg, #ffffff, var(--peach));
+border-color:#ffd4b8;
+color:#a06850;
+}
+
+.bgm-toggle-icon{
+font-size:16px;
+line-height:1;
+}
+
 .launcher{
 position:relative;
 z-index:1;
@@ -452,6 +500,12 @@ background:var(--mint);
 .sudoku input.block-right{border-right:2px solid var(--lavender-deep);}
 .sudoku input.block-bottom{border-bottom:2px solid var(--lavender-deep);}
 
+.sudoku input.sudoku-cell-conflict{
+border-color:#e85d8e;
+background:rgba(255,230,240,0.95);
+color:#8b2252;
+}
+
 /* Minesweeper */
 .ms-toolbar{
 display:flex;
@@ -467,7 +521,7 @@ font-size:22px;
 font-weight:800;
 letter-spacing:0.08em;
 color:#b875a8;
-min-width:3ch;
+min-width:12ch;
 }
 
 .ms-status-line{
